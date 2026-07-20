@@ -1,4 +1,4 @@
-.PHONY: build build-backend build-frontend test test-backend test-frontend test-frontend-critical
+.PHONY: build build-backend build-frontend init-upstream sync-upstream test test-backend test-frontend test-frontend-critical
 
 FRONTEND_CRITICAL_VITEST := \
 	src/views/auth/__tests__/LinuxDoCallbackView.spec.ts \
@@ -18,6 +18,14 @@ build-backend:
 # 编译前端（需要已安装依赖）
 build-frontend:
 	@pnpm --dir frontend run build
+
+# 首次将当前仓库接入 sub2api 的提交历史（仅限尚无提交时执行一次）
+init-upstream:
+	@./tools/sync-upstream.sh --initialize
+
+# 创建包含最新 sub2api 变更的同步分支；不会自动推送或合并
+sync-upstream:
+	@./tools/sync-upstream.sh
 
 # 运行测试（后端 + 前端）
 test: test-backend test-frontend
