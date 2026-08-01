@@ -267,7 +267,7 @@ import PortalNav from './PortalNav.vue'
 import Icon from '@/components/icons/Icon.vue'
 import { sanitizeUrl } from '@/utils/url'
 import { resolveLogoutDestination } from '@/utils/portalHome'
-import { FeatureFlags, isFeatureFlagEnabled } from '@/utils/featureFlags
+import { FeatureFlags, isFeatureFlagEnabled } from '@/utils/featureFlags'
 
 const router = useRouter()
 const route = useRoute()
