@@ -1,4 +1,3 @@
-# syntax=docker/dockerfile:1.7
 # =============================================================================
 # Sub2API Multi-Stage Dockerfile
 # =============================================================================
@@ -9,30 +8,28 @@
 
 ARG NODE_IMAGE=node:24-alpine
 ARG GOLANG_IMAGE=golang:1.26.5-alpine
-ARG ALPINE_IMAGE=alpine:3.21
-ARG POSTGRES_IMAGE=postgres:18-alpine
+ARG ALPINE_IMAGE=alpine:3.20
 ARG GOPROXY=https://goproxy.cn,direct
 ARG GOSUMDB=sum.golang.google.cn
-ARG NPM_CONFIG_REGISTRY=
+# Optional hub build-args (frontend stage). See docs/PRODUCTION_HUB_DEPLOY.md
+ARG VITE_PRICEAI_PUBLIC_ORIGIN=
+ARG VITE_PRICEAI_PUBLIC_HOME_PATH=/
 
 # -----------------------------------------------------------------------------
 # Stage 1: Frontend Builder
 # -----------------------------------------------------------------------------
-# --platform=$BUILDPLATFORM: the frontend output is JS (arch-neutral), so build
-# it on the native host arch instead of under QEMU emulation for the target.
-FROM --platform=${BUILDPLATFORM} ${NODE_IMAGE} AS frontend-builder
-ARG NPM_CONFIG_REGISTRY
+FROM ${NODE_IMAGE} AS frontend-builder
 
 WORKDIR /app/frontend
+ENV NODE_OPTIONS=--max-old-space-size=1536
 
-# Install pnpm (pinned to v9 to match CI and keep builds reproducible)
-RUN corepack enable && corepack prepare pnpm@9 --activate
+# Install pnpm. Keep this pinned to the lockfile-compatible major version so
+# Docker builds remain reproducible when pnpm changes config validation rules.
+RUN corepack enable && corepack prepare pnpm@9.15.9 --activate
 
 # Install dependencies first (better caching)
 COPY frontend/package.json frontend/pnpm-lock.yaml ./
-RUN --mount=type=cache,id=sub2api-pnpm-store,target=/root/.local/share/pnpm/store \
-    if [ -n "${NPM_CONFIG_REGISTRY}" ]; then pnpm config set registry "${NPM_CONFIG_REGISTRY}"; fi && \
-    pnpm install --frozen-lockfile --prefer-offline
+RUN pnpm install --frozen-lockfile
 
 # Copy frontend source and build.
 # LegalDocumentView.vue (admin-compliance gate) build-time imports
@@ -41,16 +38,19 @@ RUN --mount=type=cache,id=sub2api-pnpm-store,target=/root/.local/share/pnpm/stor
 # Copy only that subtree to keep the build dependency minimal.
 COPY frontend/ ./
 COPY docs/legal/ /app/docs/legal/
+
+# Hub same-origin portal URL (baked into SPA). Empty = standalone console (no portal menu).
+ARG VITE_PRICEAI_PUBLIC_ORIGIN=
+ARG VITE_PRICEAI_PUBLIC_HOME_PATH=/
+ENV VITE_PRICEAI_PUBLIC_ORIGIN=${VITE_PRICEAI_PUBLIC_ORIGIN}
+ENV VITE_PRICEAI_PUBLIC_HOME_PATH=${VITE_PRICEAI_PUBLIC_HOME_PATH}
+
 RUN pnpm run build
 
 # -----------------------------------------------------------------------------
 # Stage 2: Backend Builder
 # -----------------------------------------------------------------------------
-# --platform=$BUILDPLATFORM: run the Go toolchain on the native host arch and
-# cross-compile to the target arch below. The binary is CGO_ENABLED=0, so this
-# is a clean pure-Go cross-compile — no QEMU emulation of go mod download / go
-# build (emulated networking here was dropping module fetches with EOF).
-FROM --platform=${BUILDPLATFORM} ${GOLANG_IMAGE} AS backend-builder
+FROM ${GOLANG_IMAGE} AS backend-builder
 
 # Build arguments for version info (set by CI)
 ARG VERSION=
@@ -58,9 +58,6 @@ ARG COMMIT=docker
 ARG DATE
 ARG GOPROXY
 ARG GOSUMDB
-# Populated by buildx from the --platform target (e.g. linux/amd64).
-ARG TARGETOS
-ARG TARGETARCH
 
 ENV GOPROXY=${GOPROXY}
 ENV GOSUMDB=${GOSUMDB}
@@ -72,10 +69,7 @@ WORKDIR /app/backend
 
 # Copy go mod files first (better caching)
 COPY backend/go.mod backend/go.sum ./
-# Cache mount keeps the module cache across builds so a transient CDN blip on
-# retry resumes instead of re-fetching every zip from scratch.
-RUN --mount=type=cache,id=sub2api-gomod,target=/go/pkg/mod \
-    go mod download
+RUN go mod download
 
 # Copy backend source first
 COPY backend/ ./
@@ -85,25 +79,17 @@ COPY --from=frontend-builder /app/backend/internal/web/dist ./internal/web/dist
 
 # Build the binary (BuildType=release for CI builds, embed frontend)
 # Version precedence: build arg VERSION > exact git tag > cmd/server/VERSION
-RUN --mount=type=cache,id=sub2api-gomod,target=/go/pkg/mod \
-    --mount=type=cache,id=sub2api-gobuild,target=/root/.cache/go-build \
-    VERSION_VALUE="${VERSION}" && \
+RUN VERSION_VALUE="${VERSION}" && \
     if [ -z "${VERSION_VALUE}" ]; then VERSION_VALUE="$(./scripts/resolve-version.sh)"; fi && \
     DATE_VALUE="${DATE:-$(date -u +%Y-%m-%dT%H:%M:%SZ)}" && \
-    CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build \
+    CGO_ENABLED=0 GOOS=linux go build \
     -tags embed \
     -ldflags="-s -w -X main.Version=${VERSION_VALUE} -X main.Commit=${COMMIT} -X main.Date=${DATE_VALUE} -X main.BuildType=release" \
-    -trimpath \
     -o /app/sub2api \
     ./cmd/server
 
 # -----------------------------------------------------------------------------
-# Stage 3: PostgreSQL Client (version-matched with docker-compose)
-# -----------------------------------------------------------------------------
-FROM ${POSTGRES_IMAGE} AS pg-client
-
-# -----------------------------------------------------------------------------
-# Stage 4: Final Runtime Image
+# Stage 3: Final Runtime Image
 # -----------------------------------------------------------------------------
 FROM ${ALPINE_IMAGE}
 
@@ -116,20 +102,9 @@ LABEL org.opencontainers.image.source="https://github.com/Wei-Shaw/sub2api"
 RUN apk add --no-cache \
     ca-certificates \
     tzdata \
+    curl \
     su-exec \
-    libpq \
-    zstd-libs \
-    lz4-libs \
-    krb5-libs \
-    libldap \
-    libedit \
     && rm -rf /var/cache/apk/*
-
-# Copy pg_dump and psql from the same postgres image used in docker-compose
-# This ensures version consistency between backup tools and the database server
-COPY --from=pg-client /usr/local/bin/pg_dump /usr/local/bin/pg_dump
-COPY --from=pg-client /usr/local/bin/psql /usr/local/bin/psql
-COPY --from=pg-client /usr/local/lib/libpq.so.5* /usr/local/lib/
 
 # Create non-root user
 RUN addgroup -g 1000 sub2api && \
@@ -138,12 +113,11 @@ RUN addgroup -g 1000 sub2api && \
 # Set working directory
 WORKDIR /app
 
-# Copy binary/resources with ownership to avoid extra full-layer chown copy
-COPY --from=backend-builder --chown=sub2api:sub2api /app/sub2api /app/sub2api
-COPY --from=backend-builder --chown=sub2api:sub2api /app/backend/resources /app/resources
+# Copy binary from builder
+COPY --from=backend-builder /app/sub2api /app/sub2api
 
 # Create data directory
-RUN mkdir -p /app/data && chown sub2api:sub2api /app/data
+RUN mkdir -p /app/data && chown -R sub2api:sub2api /app
 
 # Copy entrypoint script (fixes volume permissions then drops to sub2api)
 COPY deploy/docker-entrypoint.sh /app/docker-entrypoint.sh

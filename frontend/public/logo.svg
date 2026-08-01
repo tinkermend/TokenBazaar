@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">词元集市</title>
+  <desc id="desc">Marketplace canopy over three token pillars — brand mark for 词元集市.</desc>
+  <defs>
+    <linearGradient id="tb-bg" x1="80" y1="48" x2="464" y2="480" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#2a2145"/>
+      <stop offset="0.55" stop-color="#1a1828"/>
+      <stop offset="1" stop-color="#12101c"/>
+    </linearGradient>
+    <linearGradient id="tb-mark" x1="128" y1="112" x2="384" y2="400" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#ddd6fe"/>
+      <stop offset="0.45" stop-color="#a78bfa"/>
+      <stop offset="1" stop-color="#7c3aed"/>
+    </linearGradient>
+    <radialGradient id="tb-glow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(176 144) rotate(55) scale(288 320)">
+      <stop stop-color="#8b5cf6" stop-opacity="0.35"/>
+      <stop offset="1" stop-color="#8b5cf6" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect x="16" y="16" width="480" height="480" rx="120" fill="url(#tb-bg)"/>
+  <rect x="16" y="16" width="480" height="480" rx="120" fill="url(#tb-glow)"/>
+  <rect x="16.75" y="16.75" width="478.5" height="478.5" rx="119.25" fill="none" stroke="#c4b5fd" stroke-opacity="0.18" stroke-width="3"/>
+  <g transform="translate(0 8)">
+    <path d="M120 232c0-76 272-76 272 0" fill="none" stroke="url(#tb-mark)" stroke-width="28" stroke-linecap="round"/>
+    <path d="M144 232h224" fill="none" stroke="url(#tb-mark)" stroke-width="16" stroke-linecap="round" opacity="0.7"/>
+    <rect x="148" y="248" width="60" height="132" rx="20" fill="url(#tb-mark)" opacity="0.92"/>
+    <rect x="226" y="212" width="60" height="168" rx="20" fill="#c4b5fd"/>
+    <rect x="304" y="260" width="60" height="120" rx="20" fill="url(#tb-mark)" opacity="0.92"/>
+    <circle cx="256" cy="148" r="18" fill="#f5f3ff"/>
+    <path d="M178 292h28M241 256h28M319 304h28" stroke="#1a1828" stroke-opacity="0.28" stroke-width="12" stroke-linecap="round"/>
+  </g>
+</svg>

@@ -143,3 +143,11 @@ docs/*
 frontend/coverage/
 aicodex
 output/
+
+# ===================
+# Local agent / build artifacts
+# ===================
+.worktrees/
+/bin/
+.reasonix/
+login-locale-*.png

@@ -1,0 +1,24 @@
+{
+  "scanned_at": "2026-07-30",
+  "projects": {
+    "TokenBazaar": {
+      "path": "/Users/tinker/src/fuye/TokenBazaar/frontend",
+      "framework": "Vue 3 + Vite + Tailwind 3.4",
+      "font_stack": "system / PingFang SC / Microsoft YaHei (no webfont package)",
+      "palette": "light paper #f9f9f9, charcoal primary #2d3435, brand green #45bf78 (style.css + tailwind.config.js + PriceAI-aligned)",
+      "motion": "none (no framer-motion/gsap); driver.js for onboarding only",
+      "spacing": "Tailwind default 4pt-ish",
+      "dark_mode": "class-based dark tokens present"
+    },
+    "PriceAI": {
+      "path": "/Users/tinker/src/fuye/PriceAI",
+      "framework": "Next.js + Tailwind v4 (@import tailwindcss)",
+      "font_stack": "PingFang SC / Microsoft YaHei / Arial; mono SFMono",
+      "palette": "same paper/charcoal/green CSS vars in src/app/globals.css",
+      "motion": "none detected as design motion system",
+      "spacing": "Tailwind v4 defaults + CSS vars for surfaces"
+    }
+  },
+  "preserve": ["light paper direction", "existing routes/IA", "brand green optional depending on pick", "Chinese product labels"],
+  "introduce_after_pick": ["shared design.md", "display/body/mono pairing", "tech surface treatment", "cross-app token sync"]
+}

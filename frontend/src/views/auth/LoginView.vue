@@ -131,7 +131,7 @@
           @open="showAgreementModal = true"
         />
 
-        <div v-if="showOAuthLogin" class="space-y-3 pt-1">
+        <div v-if="showPasskeyLogin || showOAuthLogin" class="space-y-3 pt-1">
           <div class="flex items-center gap-3">
             <div class="h-px flex-1 bg-gray-200 dark:bg-dark-700"></div>
             <span class="text-xs text-gray-500 dark:text-dark-400">
@@ -139,6 +139,17 @@
             </span>
             <div class="h-px flex-1 bg-gray-200 dark:bg-dark-700"></div>
           </div>
+
+          <button
+            v-if="showPasskeyLogin"
+            type="button"
+            class="btn btn-secondary w-full"
+            :disabled="authActionDisabled"
+            @click="handlePasskeyLogin"
+          >
+            <Icon name="key" size="md" class="mr-2" />
+            {{ passkeyLoading ? t('auth.passkeySigningIn') : t('auth.passkeySignIn') }}
+          </button>
 
           <EmailOAuthButtons
             :disabled="authActionDisabled"
@@ -177,7 +188,7 @@
       <p class="text-gray-500 dark:text-dark-400">
         {{ t('auth.dontHaveAccount') }}
         <router-link
-          to="/register"
+          :to="registerLinkTarget"
           class="font-medium text-primary-600 transition-colors hover:text-primary-500 dark:text-primary-400 dark:hover:text-primary-300"
         >
           {{ t('auth.signUp') }}
@@ -198,6 +209,7 @@
 </template>
 
 <script setup lang="ts">
+import { completePriceAIBridgeRedirect, readPriceAIBridgeQuery } from '@/utils/priceai-bridge'
 import { computed, ref, reactive, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
@@ -223,12 +235,34 @@ const LOGIN_AGREEMENT_STORAGE_KEY = 'sub2api_login_agreement_consent'
 // ==================== Router & Stores ====================
 
 const router = useRouter()
+
 const authStore = useAuthStore()
 const appStore = useAppStore()
+
+async function maybeCompletePriceAIBridgeOnMount(): Promise<void> {
+  const bridge = readPriceAIBridgeQuery(router.currentRoute.value.query as Record<string, unknown>)
+  if (!bridge.returnUrl) return
+  if (!authStore.isAuthenticated) return
+  const ok = await completePriceAIBridgeRedirect(bridge)
+  if (!ok) {
+    appStore.showError('回跳门户失败：桥接服务不可用或 return_url 未放行，请重试登录。')
+  }
+}
+
+const registerLinkTarget = computed(() => {
+  const redirect = typeof router.currentRoute.value.query.redirect === 'string'
+    ? router.currentRoute.value.query.redirect
+    : ''
+  if (redirect && redirect.startsWith('/') && !redirect.startsWith('//')) {
+    return { path: '/register', query: { redirect } }
+  }
+  return { path: '/register' }
+})
 
 // ==================== State ====================
 
 const isLoading = ref<boolean>(false)
+const passkeyLoading = ref<boolean>(false)
 const errorMessage = ref<string>('')
 const showPassword = ref<boolean>(false)
 const publicSettingsLoaded = ref<boolean>(false)
@@ -245,6 +279,7 @@ const oidcOAuthProviderName = ref<string>('OIDC')
 const githubOAuthEnabled = ref<boolean>(false)
 const googleOAuthEnabled = ref<boolean>(false)
 const passwordResetEnabled = ref<boolean>(false)
+const passkeyEnabled = ref<boolean>(false)
 const loginAgreementEnabled = ref<boolean>(false)
 const loginAgreementMode = ref<'modal' | 'checkbox' | string>('modal')
 const loginAgreementUpdatedAt = ref<string>('')
@@ -283,7 +318,11 @@ const agreementGateActive = computed(
 )
 
 const authActionDisabled = computed(
-  () => isLoading.value || !publicSettingsLoaded.value || agreementGateActive.value
+  () => isLoading.value || passkeyLoading.value || !publicSettingsLoaded.value || agreementGateActive.value
+)
+
+const showPasskeyLogin = computed(
+  () => passkeyEnabled.value && typeof window.PublicKeyCredential !== 'undefined'
 )
 
 const showOAuthLogin = computed(
@@ -306,6 +345,8 @@ watch(validationToastMessage, (value, previousValue) => {
 // ==================== Lifecycle ====================
 
 onMounted(async () => {
+  void maybeCompletePriceAIBridgeOnMount()
+
   const expiredFlag = sessionStorage.getItem('auth_expired')
   if (expiredFlag) {
     sessionStorage.removeItem('auth_expired')
@@ -328,6 +369,7 @@ onMounted(async () => {
     googleOAuthEnabled.value = settings.google_oauth_enabled
     backendModeEnabled.value = settings.backend_mode_enabled
     passwordResetEnabled.value = settings.password_reset_enabled
+    passkeyEnabled.value = settings.passkey_enabled === true
     applyLoginAgreementSettings(settings)
   } catch (error) {
     console.error('Failed to load public settings:', error)
@@ -497,9 +539,26 @@ async function handleLogin(): Promise<void> {
     clearAllAffiliateReferralCodes()
     appStore.showSuccess(t('auth.loginSuccess'))
 
+    // PriceAI C-end bridge: issue one-time code and return to PriceAI (same tab).
+    // On failure stay on /login — falling through to /console hides the bridge error
+    // and leaves PriceAI without priceai_cend_session (login dialog loops).
+    const bridge = readPriceAIBridgeQuery(router.currentRoute.value.query as Record<string, unknown>)
+    if (bridge.returnUrl) {
+      const ok = await completePriceAIBridgeRedirect(bridge)
+      if (ok) return
+      appStore.showError('登录成功，但回跳门户失败。请确认 priceai_bridge 已配置、return_url 在白名单，且访问主机与门户一致（不要混用 localhost 与 127.0.0.1）。')
+      return
+    }
+
     // Redirect to dashboard or intended route
-    const redirectTo = (router.currentRoute.value.query.redirect as string) || '/dashboard'
-    await router.push(redirectTo)
+    // /console splits by role (admin -> /admin/dashboard, others -> /dashboard).
+    // Hardcoding /dashboard here used to drop admins on the C-end console.
+    const redirectTo = (router.currentRoute.value.query.redirect as string) || '/console'
+    if (typeof redirectTo === 'string' && redirectTo.startsWith('/') && !redirectTo.startsWith('//')) {
+      await router.push(redirectTo)
+    } else {
+      await router.push('/console')
+    }
   } catch (error: unknown) {
     // Reset Turnstile on error
     if (turnstileRef.value) {
@@ -513,6 +572,33 @@ async function handleLogin(): Promise<void> {
     appStore.showError(errorMessage.value)
   } finally {
     isLoading.value = false
+  }
+}
+
+async function handlePasskeyLogin(): Promise<void> {
+  if (agreementGateActive.value) {
+    appStore.showWarning(t('legal.loginAgreementPrompt.loginRequiredWarning'))
+    if (loginAgreementMode.value !== 'checkbox') {
+      showAgreementModal.value = true
+    }
+    return
+  }
+
+  passkeyLoading.value = true
+  try {
+    await authStore.loginWithPasskey()
+    clearAllAffiliateReferralCodes()
+    appStore.showSuccess(t('auth.loginSuccess'))
+    const redirectTo = (router.currentRoute.value.query.redirect as string) || '/dashboard'
+    await router.push(redirectTo)
+  } catch (error: unknown) {
+    const fallback = error instanceof DOMException && error.name === 'NotAllowedError'
+      ? t('auth.passkeyCancelled')
+      : t('auth.passkeyFailed')
+    errorMessage.value = extractI18nErrorMessage(error, t, 'auth.errors', fallback)
+    appStore.showError(errorMessage.value)
+  } finally {
+    passkeyLoading.value = false
   }
 }
 
@@ -531,9 +617,22 @@ async function handle2FAVerify(code: string): Promise<void> {
     clearAllAffiliateReferralCodes()
     appStore.showSuccess(t('auth.loginSuccess'))
 
-    // Redirect to dashboard or intended route
-    const redirectTo = (router.currentRoute.value.query.redirect as string) || '/dashboard'
-    await router.push(redirectTo)
+    const bridge = readPriceAIBridgeQuery(router.currentRoute.value.query as Record<string, unknown>)
+    if (bridge.returnUrl) {
+      const ok = await completePriceAIBridgeRedirect(bridge)
+      if (ok) return
+      appStore.showError('登录成功，但回跳门户失败。请确认 priceai_bridge 已配置、return_url 在白名单，且访问主机与门户一致（不要混用 localhost 与 127.0.0.1）。')
+      return
+    }
+
+    // /console splits by role (admin -> /admin/dashboard, others -> /dashboard).
+    // Hardcoding /dashboard here used to drop admins on the C-end console.
+    const redirectTo = (router.currentRoute.value.query.redirect as string) || '/console'
+    if (typeof redirectTo === 'string' && redirectTo.startsWith('/') && !redirectTo.startsWith('//')) {
+      await router.push(redirectTo)
+    } else {
+      await router.push('/console')
+    }
   } catch (error: unknown) {
     const err = error as { message?: string; response?: { data?: { message?: string } } }
     const message = err.response?.data?.message || err.message || t('profile.totp.loginFailed')

@@ -344,3 +344,10 @@ sub2api-bmai/
 - [Ent 文档](https://entgo.io/docs/getting-started)
 - [Vue3 文档](https://vuejs.org/)
 - [pnpm 文档](https://pnpm.io/)
+
+## PriceAI 集合体门户
+
+兄弟项目路径：`/Users/tinker/src/fuye/PriceAI`。  
+对接说明见 [docs/PRICEAI_HUB.md](docs/PRICEAI_HUB.md)。  
+第一期：PriceAI「登录 / 使用」深链到本仓 `/login` 与 `/keys`。
+

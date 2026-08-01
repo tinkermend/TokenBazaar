@@ -11,15 +11,15 @@
       <!-- Custom Logo or Default Logo -->
       <router-link
         :to="homePath"
-        class="sidebar-logo flex h-9 w-9 items-center justify-center overflow-hidden rounded-xl shadow-glow transition-opacity hover:opacity-80"
+        class="sidebar-logo flex h-9 w-9 items-center justify-center overflow-hidden rounded-full shadow-[0_10px_30px_rgba(26, 24, 40,0.06)] ring-1 ring-[#a8a6b8]/30 transition-opacity hover:opacity-80"
         @click="handleMenuItemClick(homePath)"
       >
-        <img v-if="settingsLoaded" :src="siteLogo || '/logo.png'" alt="Logo" class="h-full w-full object-contain" />
+        <img v-if="settingsLoaded" :src="siteLogo || '/logo.svg'" alt="Logo" class="h-full w-full object-contain" />
       </router-link>
       <div class="sidebar-brand" :class="{ 'sidebar-brand-collapsed': sidebarCollapsed }" :aria-hidden="sidebarCollapsed ? 'true' : 'false'">
         <router-link
           :to="homePath"
-          class="sidebar-brand-title text-lg font-bold text-gray-900 transition-colors hover:text-primary-600 dark:text-white dark:hover:text-primary-400"
+          class="sidebar-brand-title text-lg font-semibold tracking-normal text-[#14121f] transition-colors hover:text-[#14121f] dark:text-white dark:hover:text-brand-300"
           @click="handleMenuItemClick(homePath)"
         >
           {{ siteName }}
@@ -915,8 +915,7 @@ function handleGroupClick(item: NavItem) {
 // Initialize theme
 const savedTheme = localStorage.getItem('theme')
 if (
-  savedTheme === 'dark' ||
-  (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)
+  savedTheme === 'dark'
 ) {
   isDark.value = true
   document.documentElement.classList.add('dark')

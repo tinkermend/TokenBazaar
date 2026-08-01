@@ -11,8 +11,11 @@ describe('resolveDocumentTitle', () => {
   })
 
   it('站点名为空时，回退默认站点名', () => {
-    expect(resolveDocumentTitle('Dashboard', '')).toBe('Dashboard - Sub2API')
-    expect(resolveDocumentTitle(undefined, '   ')).toBe('Sub2API')
+    // 默认站名的唯一来源是 router/title.ts；改品牌名时这里要一起改。
+    const fallback = resolveDocumentTitle(undefined, '')
+    expect(fallback).toBe('词元集市')
+    expect(resolveDocumentTitle('Dashboard', '')).toBe(`Dashboard - ${fallback}`)
+    expect(resolveDocumentTitle(undefined, '   ')).toBe(fallback)
   })
 
   it('站点名变更时仅影响后续路由标题计算', () => {

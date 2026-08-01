@@ -1,0 +1,53 @@
+{
+  "$schema": "./hub-contract.schema.md",
+  "version": 1,
+  "_owner": "TokenBazaar — this file is the single source of truth. PriceAI vendors a byte-identical copy at src/lib/hub-contract.json.",
+  "_sync": "See contracts/README.md. Both repos have automated checks that fail when their code drifts from this file.",
+
+  "portalModules": [
+    {
+      "key": "channels",
+      "path": "/channels",
+      "label": { "zh": "卡网订阅", "zhShort": "卡网", "en": "Card Shops", "enShort": "Cards" },
+      "activePrefixes": ["/channels", "/products"],
+      "excludePrefixes": []
+    },
+    {
+      "key": "official",
+      "path": "/official-prices",
+      "label": { "zh": "官方订阅", "zhShort": "订阅", "en": "Official Plans", "enShort": "Plans" },
+      "activePrefixes": ["/official-prices"],
+      "excludePrefixes": []
+    },
+    {
+      "key": "api",
+      "path": "/official-api",
+      "label": { "zh": "官方 API", "zhShort": "API", "en": "Official API", "enShort": "API" },
+      "activePrefixes": ["/official-api"],
+      "excludePrefixes": []
+    },
+    {
+      "key": "transit",
+      "path": "/api-transit",
+      "label": { "zh": "中转 API", "zhShort": "中转", "en": "API Relays", "enShort": "Relays" },
+      "activePrefixes": ["/api-transit"],
+      "excludePrefixes": ["/api-transit/detector"]
+    },
+    {
+      "key": "detector",
+      "path": "/api-transit/detector",
+      "label": { "zh": "模型检测", "zhShort": "检测", "en": "Model Check", "enShort": "Check" },
+      "activePrefixes": ["/api-transit/detector"],
+      "excludePrefixes": []
+    }
+  ],
+
+  "paths": {
+    "tokenbazaarConsole": "/console",
+    "tokenbazaarLogin": "/login",
+    "tokenbazaarKeys": "/keys",
+    "tokenbazaarApi": "/api/v1",
+    "priceaiBridge": "/auth/tokenbazaar",
+    "priceaiAdmin": "/pa-admin"
+  }
+}

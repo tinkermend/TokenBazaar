@@ -2,6 +2,23 @@
 
 This directory contains files for deploying Sub2API on Linux servers and Apple-silicon Macs.
 
+
+## 词元集市集合体（PriceAI + TokenBazaar）
+
+若部署的是**门户+供给**一体产品（词元集市），不要只看下方单机 Sub2API 说明。
+
+| 文档 | 用途 |
+|------|------|
+| [**生产部署方案（宪法）**](../docs/PRODUCTION_HUB_DEPLOY.md) | **默认同域架构、硬约束、发版门禁、防漂移清单** |
+| [same-origin/](./same-origin/) | `route-map.json`、生产 Caddy/Nginx、本地 L2 |
+| [LOCAL_HUB.md](./same-origin/LOCAL_HUB.md) | 本地 `make hub-verify` / `make hub-ci` |
+| CI | TB job `hub-deploy-gate`；PA quality「Hub deployability gates」 |
+| [PRICEAI_HUB.md](../docs/PRICEAI_HUB.md) | 门户对接与 B1 会话桥 |
+
+**单机 TokenBazaar-only**（无门户）仍用下文 Docker / Binary。接入门户后必须满足生产宪法中的 route-map 与 env。
+
+---
+
 ## Deployment Methods
 
 | Method | Best For | Setup Wizard |

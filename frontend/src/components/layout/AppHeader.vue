@@ -1,28 +1,33 @@
 <template>
-  <header class="glass sticky top-0 z-30 border-b border-gray-200/50 dark:border-dark-700/50">
-    <div class="flex h-16 items-center justify-between px-4 md:px-6">
+  <header class="sticky top-0 z-30 border-b border-[#e3e4ee] bg-[#fbfcfe]/95 backdrop-blur-[18px] dark:border-dark-700/50 dark:bg-dark-950/90">
+    <div class="flex h-16 items-center justify-between gap-2 px-2 sm:px-4 md:px-6">
       <!-- Left: Mobile Menu Toggle + Page Title -->
-      <div class="flex items-center gap-4">
+      <div class="flex min-w-0 flex-1 items-center gap-2 sm:gap-3 md:gap-4">
         <button
           @click="toggleMobileSidebar"
-          class="btn-ghost btn-icon lg:hidden"
+          class="btn-ghost btn-icon shrink-0 lg:hidden"
           :aria-label="t('common.toggleMenu')"
         >
           <Icon name="menu" size="md" />
         </button>
 
-        <div class="hidden lg:block">
-          <h1 class="text-lg font-semibold text-gray-900 dark:text-white">
+        <div class="hidden min-w-0 shrink-0 lg:block">
+          <h1 class="truncate text-lg font-semibold tracking-[-0.02em] text-[#14121f] dark:text-white">
             {{ pageTitle }}
           </h1>
-          <p v-if="pageDescription" class="text-xs text-gray-500 dark:text-dark-400">
+          <p v-if="pageDescription" class="truncate text-xs text-[#65607a] dark:text-dark-400">
             {{ pageDescription }}
           </p>
+        </div>
+
+        <!-- Flat PriceAI portal modules -->
+        <div class="min-w-0 flex-1">
+          <PortalNav />
         </div>
       </div>
 
       <!-- Right: Announcements + Docs + Language + Subscriptions + Balance + User Dropdown -->
-      <div class="flex items-center gap-3">
+      <div class="flex min-w-0 items-center gap-1 sm:gap-3">
         <!-- Announcement Bell -->
         <AnnouncementBell v-if="user" />
 
@@ -32,11 +37,21 @@
           :href="docUrl"
           target="_blank"
           rel="noopener noreferrer"
-          class="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-900 dark:text-dark-400 dark:hover:bg-dark-800 dark:hover:text-white"
+          class="hidden items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-900 dark:text-dark-400 dark:hover:bg-dark-800 dark:hover:text-white sm:flex"
         >
           <Icon name="book" size="sm" />
           <span class="hidden sm:inline">{{ t('nav.docs') }}</span>
         </a>
+
+        <!-- Model Plaza Entry -->
+        <router-link
+          v-if="user && modelPlazaEnabled"
+          :to="{ path: '/model-plaza', query: { embedded: '1' } }"
+          class="hidden items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-900 dark:text-dark-400 dark:hover:bg-dark-800 dark:hover:text-white sm:flex"
+        >
+          <Icon name="grid" size="sm" />
+          <span class="hidden sm:inline">{{ t('nav.modelPlaza') }}</span>
+        </router-link>
 
         <!-- Language Switcher -->
         <LocaleSwitcher />
@@ -126,12 +141,12 @@
                 <div class="text-sm font-medium text-gray-900 dark:text-white">
                   {{ displayName }}
                 </div>
-                <div class="text-xs text-gray-500 dark:text-dark-400">{{ user.email }}</div>
+                <div class="text-xs text-[#65607a] dark:text-dark-400">{{ user.email }}</div>
               </div>
 
               <!-- Balance (mobile only) -->
               <div class="border-b border-gray-100 px-4 py-2 dark:border-dark-700 sm:hidden">
-                <div class="text-xs text-gray-500 dark:text-dark-400">
+                <div class="text-xs text-[#65607a] dark:text-dark-400">
                   {{ t('common.balance') }}
                 </div>
                 <div class="text-sm font-semibold text-primary-600 dark:text-primary-400">
@@ -248,8 +263,11 @@ import { useAdminSettingsStore } from '@/stores/adminSettings'
 import LocaleSwitcher from '@/components/common/LocaleSwitcher.vue'
 import SubscriptionProgressMini from '@/components/common/SubscriptionProgressMini.vue'
 import AnnouncementBell from '@/components/common/AnnouncementBell.vue'
+import PortalNav from './PortalNav.vue'
 import Icon from '@/components/icons/Icon.vue'
 import { sanitizeUrl } from '@/utils/url'
+import { resolveLogoutDestination } from '@/utils/portalHome'
+import { FeatureFlags, isFeatureFlagEnabled } from '@/utils/featureFlags
 
 const router = useRouter()
 const route = useRoute()
@@ -264,6 +282,7 @@ const dropdownOpen = ref(false)
 const dropdownRef = ref<HTMLElement | null>(null)
 const contactInfo = computed(() => appStore.contactInfo)
 const docUrl = computed(() => sanitizeUrl(appStore.docUrl))
+const modelPlazaEnabled = computed(() => isFeatureFlagEnabled(FeatureFlags.modelPlaza))
 const avatarUrl = computed(() => user.value?.avatar_url?.trim() || '')
 const availableBalance = computed(() => Number(user.value?.balance || 0))
 const frozenBalance = computed(() => Number(user.value?.frozen_balance || 0))
@@ -338,10 +357,16 @@ async function handleLogout() {
   try {
     await authStore.logout()
   } catch (error) {
-    // Ignore logout errors - still redirect to login
+    // Ignore logout errors - still leave the session UI
     console.error('Logout error:', error)
   }
-  await router.push('/login')
+  // Hub mode: return to PriceAI homepage (比价主站), not the login page.
+  const destination = resolveLogoutDestination()
+  if (destination.type === 'external') {
+    window.location.assign(destination.url)
+    return
+  }
+  await router.push(destination.path)
 }
 
 function handleReplayGuide() {
