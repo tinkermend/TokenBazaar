@@ -1263,3 +1263,17 @@ image_storage:
   presign_expiry_hours: 24
   # 当上游返回的是图片 url 时，下载该图片再转存的字节上限（默认 32MB）
   max_download_bytes: 33554432
+
+# =============================================================================
+# PriceAI C-end session bridge (optional)
+# =============================================================================
+priceai_bridge:
+  # Shared secret with PriceAI PRICEAI_CEND_BRIDGE_SECRET
+  secret: ""
+  code_ttl_seconds: 90
+  # Allowed PriceAI origins for return_url callback
+  return_origins: []
+  # Example:
+  # return_origins:
+  #   - http://127.0.0.1:3000
+  #   - https://priceai.example.com

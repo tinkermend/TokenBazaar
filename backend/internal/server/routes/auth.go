@@ -49,6 +49,13 @@ func RegisterAuthRoutes(
 		}), h.Auth.RefreshToken)
 		// 登出接口（公开，允许未认证用户调用以撤销Refresh Token）
 		auth.POST("/logout", h.Auth.Logout)
+		// PriceAI C-end session bridge (B1 one-time code)
+		auth.POST("/priceai/bridge/exchange", rateLimiter.LimitWithOptions("priceai-bridge-exchange", 60, time.Minute, middleware.RateLimitOptions{
+			FailureMode: middleware.RateLimitFailClose,
+		}), h.Auth.ExchangePriceAIBridgeCode)
+		auth.POST("/priceai/bridge/revoke", rateLimiter.LimitWithOptions("priceai-bridge-revoke", 30, time.Minute, middleware.RateLimitOptions{
+			FailureMode: middleware.RateLimitFailClose,
+		}), h.Auth.RevokePriceAIBridgeSessions)
 		// 优惠码验证接口添加速率限制：每分钟最多 10 次（Redis 故障时 fail-close）
 		auth.POST("/validate-promo-code", rateLimiter.LimitWithOptions("validate-promo", 10, time.Minute, middleware.RateLimitOptions{
 			FailureMode: middleware.RateLimitFailClose,
@@ -228,6 +235,8 @@ func RegisterAuthRoutes(
 		authenticated.GET("/auth/me", h.Auth.GetCurrentUser)
 		// 撤销所有会话（需要认证）
 		authenticated.POST("/auth/revoke-all-sessions", h.Auth.RevokeAllSessions)
+		// PriceAI bridge: issue one-time code (authenticated)
+		authenticated.POST("/auth/priceai/bridge/issue", h.Auth.IssuePriceAIBridgeCode)
 		authenticated.POST("/auth/oauth/bind-token", h.Auth.PrepareOAuthBindAccessTokenCookie)
 	}
 }

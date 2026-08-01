@@ -72,6 +72,7 @@ type Config struct {
 	Redis                   RedisConfig                   `mapstructure:"redis"`
 	Ops                     OpsConfig                     `mapstructure:"ops"`
 	JWT                     JWTConfig                     `mapstructure:"jwt"`
+	PriceAIBridge           PriceAIBridgeConfig           `mapstructure:"priceai_bridge"`
 	Totp                    TotpConfig                    `mapstructure:"totp"`
 	LinuxDo                 LinuxDoConnectConfig          `mapstructure:"linuxdo_connect"`
 	WeChat                  WeChatConnectConfig           `mapstructure:"wechat_connect"`
@@ -1465,6 +1466,16 @@ type OpsMetricsCollectorCacheConfig struct {
 	TTL     time.Duration `mapstructure:"ttl"`
 }
 
+// PriceAIBridgeConfig C-end session bridge for sister app PriceAI (B1 one-time code).
+type PriceAIBridgeConfig struct {
+	// Secret shared with PriceAI server for exchange auth. Empty disables bridge APIs.
+	Secret string `mapstructure:"secret"`
+	// ReturnOrigins allowed PriceAI origins for return_url (comma-separated in env via string slice).
+	ReturnOrigins []string `mapstructure:"return_origins"`
+	// CodeTTLSeconds one-time code lifetime; default 90.
+	CodeTTLSeconds int `mapstructure:"code_ttl_seconds"`
+}
+
 type JWTConfig struct {
 	Secret     string `mapstructure:"secret"`
 	ExpireHour int    `mapstructure:"expire_hour"`
@@ -1721,6 +1732,7 @@ func load(allowMissingJWTSecret bool) (*Config, error) {
 	cfg.OIDC.ValidateIDTokenExplicit = hasExplicitConfigOrEnv("oidc_connect.validate_id_token", "OIDC_CONNECT_VALIDATE_ID_TOKEN")
 	cfg.Dashboard.KeyPrefix = strings.TrimSpace(cfg.Dashboard.KeyPrefix)
 	cfg.CORS.AllowedOrigins = normalizeStringSlice(cfg.CORS.AllowedOrigins)
+	cfg.PriceAIBridge.ReturnOrigins = normalizeStringSlice(cfg.PriceAIBridge.ReturnOrigins)
 	cfg.Security.ResponseHeaders.AdditionalAllowed = normalizeStringSlice(cfg.Security.ResponseHeaders.AdditionalAllowed)
 	cfg.Security.ResponseHeaders.ForceRemove = normalizeStringSlice(cfg.Security.ResponseHeaders.ForceRemove)
 	cfg.Security.CSP.Policy = strings.TrimSpace(cfg.Security.CSP.Policy)
@@ -2073,6 +2085,9 @@ func setDefaults() {
 	viper.SetDefault("jwt.expire_hour", 24)
 	viper.SetDefault("jwt.access_token_expire_minutes", 0) // 0 表示回退到 expire_hour
 	viper.SetDefault("jwt.refresh_token_expire_days", 30)  // 30天Refresh Token有效期
+	viper.SetDefault("priceai_bridge.code_ttl_seconds", 90)
+	viper.SetDefault("priceai_bridge.return_origins", []string{})
+	viper.SetDefault("priceai_bridge.secret", "")
 	viper.SetDefault("jwt.refresh_window_minutes", 2)      // 过期前2分钟开始允许刷新
 
 	// TOTP

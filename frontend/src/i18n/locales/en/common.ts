@@ -197,12 +197,26 @@ export default {
     contentModeration: 'Content Moderation',
     promptAudit: 'Prompt Audit',
     auditLogs: 'Audit Logs',
+    // PriceAI portal modules (docs/PRICEAI_PORTAL_NAV_SPEC.md §4.2)
+    portal: 'Explore',
+    portalChannels: 'Card Shops',
+    portalChannelsShort: 'Cards',
+    portalOfficial: 'Official Plans',
+    portalOfficialShort: 'Plans',
+    portalApi: 'Official API',
+    portalApiShort: 'API',
+    portalTransit: 'API Relays',
+    portalTransitShort: 'Relays',
+    portalDetector: 'Model Check',
+    portalDetectorShort: 'Check',
   },
 
   // Auth
   auth: {
     welcomeBack: 'Welcome Back',
     signInToAccount: 'Sign in to your account to continue',
+    secureSessionBadge: 'auth · secure session',
+    allRightsReserved: 'All rights reserved.',
     signIn: 'Sign In',
     signingIn: 'Signing in...',
     createAccount: 'Create Account',

@@ -1,0 +1,59 @@
+# Same-origin reverse proxy: PriceAI portal + TokenBazaar console on one domain.
+# Contract: docs/PRICEAI_PORTAL_NAV_SPEC.md §8.1 — machine-readable in ./route-map.json
+#
+# Caddy equivalent of ./nginx.conf. Matchers are evaluated in the order written;
+# the bare reverse_proxy at the end is the PriceAI default.
+
+www.example.com {
+	encode zstd gzip
+	request_body {
+		max_size 64MB
+	}
+
+	# --- TokenBazaar API ------------------------------------------------------
+	# Matched before PriceAI's own /api/* handlers (constraint B).
+	# Streamed LLM responses must not be buffered.
+	@tb_api path /api/v1 /api/v1/*
+	handle @tb_api {
+		reverse_proxy 127.0.0.1:8080 {
+			flush_interval -1
+			transport http {
+				read_timeout 600s
+				write_timeout 600s
+			}
+		}
+	}
+
+	# --- TokenBazaar auth callbacks (constraint A) ----------------------------
+	# Only /auth/tokenbazaar/* belongs to PriceAI; the rest are TokenBazaar's OAuth /
+	# OIDC / WeChat / DingTalk callbacks and must not fall through to the portal.
+	@tb_auth path /auth/callback /auth/oidc/callback /auth/linuxdo/callback \
+		/auth/wechat/callback /auth/wechat/payment/callback \
+		/auth/dingtalk/callback /auth/dingtalk/email-completion
+	handle @tb_auth {
+		reverse_proxy 127.0.0.1:8080
+	}
+
+	# --- TokenBazaar console and account pages --------------------------------
+	# /admin resolved 2026-07-31 (option A): PriceAI Admin lives at /pa-admin and
+	# falls through to the default, so /admin is TokenBazaar's alone.
+	@tb_console path \
+		/login /login/* /register /register/* /logout /logout/* \
+		/forgot-password /forgot-password/* /reset-password /reset-password/* \
+		/email-verify /email-verify/* /setup /setup/* \
+		/console /console/* /dashboard /dashboard/* /keys /keys/* /key-usage /key-usage/* \
+		/usage /usage/* /profile /profile/* /orders /orders/* \
+		/subscriptions /subscriptions/* /purchase /purchase/* \
+		/redeem /redeem/* /monitor /monitor/* /affiliate /affiliate/* \
+		/batch-image /batch-image/* /available-channels /available-channels/* \
+		/home /home/* /payment/* /custom/* /legal/* \
+		/admin /admin/*
+	handle @tb_console {
+		reverse_proxy 127.0.0.1:8080
+	}
+
+	# --- Default: PriceAI portal ----------------------------------------------
+	handle {
+		reverse_proxy 127.0.0.1:3000
+	}
+}

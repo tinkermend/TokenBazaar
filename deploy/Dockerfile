@@ -11,6 +11,9 @@ ARG GOLANG_IMAGE=golang:1.26.5-alpine
 ARG ALPINE_IMAGE=alpine:3.20
 ARG GOPROXY=https://goproxy.cn,direct
 ARG GOSUMDB=sum.golang.google.cn
+# Optional hub build-args (frontend stage). See docs/PRODUCTION_HUB_DEPLOY.md
+ARG VITE_PRICEAI_PUBLIC_ORIGIN=
+ARG VITE_PRICEAI_PUBLIC_HOME_PATH=/
 
 # -----------------------------------------------------------------------------
 # Stage 1: Frontend Builder
@@ -35,6 +38,13 @@ RUN pnpm install --frozen-lockfile
 # Copy only that subtree to keep the build dependency minimal.
 COPY frontend/ ./
 COPY docs/legal/ /app/docs/legal/
+
+# Hub same-origin portal URL (baked into SPA). Empty = standalone console (no portal menu).
+ARG VITE_PRICEAI_PUBLIC_ORIGIN=
+ARG VITE_PRICEAI_PUBLIC_HOME_PATH=/
+ENV VITE_PRICEAI_PUBLIC_ORIGIN=${VITE_PRICEAI_PUBLIC_ORIGIN}
+ENV VITE_PRICEAI_PUBLIC_HOME_PATH=${VITE_PRICEAI_PUBLIC_HOME_PATH}
+
 RUN pnpm run build
 
 # -----------------------------------------------------------------------------

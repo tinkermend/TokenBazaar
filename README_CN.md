@@ -816,6 +816,27 @@ sub2api/
 
 ---
 
+## TokenBazaar × PriceAI 本地联调账号
+
+> 仅用于本机 / 开发环境。AUTO_SETUP 生成的默认管理员，**不是生产密钥**，可写入文档方便联调。
+
+| 项 | 值 |
+| --- | --- |
+| 管理员邮箱 | `admin@tokenbazaar.local` |
+| 管理员密码 | `Admin123456!` |
+| PriceAI 主站 | http://127.0.0.1:3000 |
+| TokenBazaar 控制台（Vite） | http://127.0.0.1:5173 |
+| TokenBazaar API | http://127.0.0.1:8081 |
+| Postgres (Podman) | `tokenbazaar-pg` → `127.0.0.1:5432`（user/pass/db: `sub2api`） |
+| Redis (Podman) | `tokenbazaar-redis` → `127.0.0.1:6379` |
+| 共享 Postgres | 一实例两库：`sub2api`（本仓）+ `priceai`（PriceAI）；见 [deploy/local-hub/README.md](deploy/local-hub/README.md) |
+
+说明：
+
+- 本机若 **8080** 被占用，API 使用 **8081**；控制台 dev 用 **5173**，避免与 PriceAI **3000** 冲突。
+- 默认可能关闭普通用户注册；联调登录可用上表管理员。
+- 更完整的门户对接见 [docs/PRICEAI_HUB.md](docs/PRICEAI_HUB.md)、[AGENTS.md](AGENTS.md)。
+
 ## 许可证
 
 本项目基于 [GNU 宽通用公共许可证 v3.0](LICENSE)（或更高版本）授权。

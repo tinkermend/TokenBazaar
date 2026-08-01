@@ -10,8 +10,7 @@ import './style.css'
 function initThemeClass() {
   const savedTheme = localStorage.getItem('theme')
   const shouldUseDark =
-    savedTheme === 'dark' ||
-    (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)
+    savedTheme === 'dark' // light-first: ignore system dark unless user chose dark
   document.documentElement.classList.toggle('dark', shouldUseDark)
 }
 

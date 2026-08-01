@@ -1699,6 +1699,11 @@ func hashToken(token string) string {
 	return hex.EncodeToString(hash[:])
 }
 
+// MatchesTokenVersion reports whether JWT claims token_version is still valid for user.
+func (s *AuthService) MatchesTokenVersion(user *User, claimVersion int64) bool {
+	return user != nil && claimVersion == resolvedTokenVersion(user)
+}
+
 func resolvedTokenVersion(user *User) int64 {
 	if user == nil {
 		return 0

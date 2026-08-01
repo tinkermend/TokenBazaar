@@ -4,6 +4,7 @@
  */
 
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
+import { completePriceAIBridgeRedirect, readPriceAIBridgeQuery } from '@/utils/priceai-bridge'
 import { useAuthStore } from '@/stores/auth'
 import { useAppStore } from '@/stores/app'
 import { useAdminSettingsStore } from '@/stores/adminSettings'
@@ -12,11 +13,14 @@ import { useNavigationLoadingState } from '@/composables/useNavigationLoading'
 import { useRoutePrefetch } from '@/composables/useRoutePrefetch'
 import { getSetupStatus } from '@/api/setup'
 import { resolveCompletedSetupRedirectPath } from './setupRedirect'
+import { resolveConsoleDestination } from './consoleRedirect'
 import { resolveRouteDocumentTitle } from './title'
+import { getPriceAiPortalHomeUrl } from '@/utils/portalHome'
 
 /**
  * Route definitions with lazy loading
  */
+
 const routes: RouteRecordRaw[] = [
   // ==================== Setup Routes ====================
   {
@@ -31,13 +35,29 @@ const routes: RouteRecordRaw[] = [
 
   // ==================== Public Routes ====================
   {
+    // Legacy console marketing home — always leave for PriceAI portal in hub mode.
     path: '/home',
     name: 'Home',
     component: () => import('@/views/HomeView.vue'),
+    beforeEnter: (_to, _from, next) => {
+      const portalHome = getPriceAiPortalHomeUrl()
+      if (portalHome) {
+        window.location.replace(portalHome)
+        return
+      }
+      // Standalone Sub2API without portal: keep original home page.
+      next()
+    },
     meta: {
       requiresAuth: false,
       title: 'Home'
     }
+  },
+  {
+    path: '/logout',
+    name: 'Logout',
+    component: () => import('@/views/auth/LogoutView.vue'),
+    meta: { requiresAuth: false, title: 'Logout' },
   },
   {
     path: '/login',
@@ -179,7 +199,38 @@ const routes: RouteRecordRaw[] = [
   // ==================== User Routes ====================
   {
     path: '/',
-    redirect: '/home'
+    name: 'Root',
+    beforeEnter: (_to, _from, next) => {
+      const portalHome = getPriceAiPortalHomeUrl()
+      if (portalHome) {
+        window.location.replace(portalHome)
+        return
+      }
+      next('/home')
+    },
+    component: () => import('@/views/HomeView.vue'),
+    meta: {
+      requiresAuth: false,
+      title: 'Home'
+    }
+  },
+  {
+    // Stable entry point for the PriceAI portal's "控制台" link.
+    // TokenBazaar's post-login landing depends on the role, but PriceAI builds its
+    // href statically and cannot know it — so it points here and we do the split.
+    // Keep the path stable: PriceAI's NEXT_PUBLIC_TOKENBAZAAR_POST_LOGIN_PATH targets it.
+    path: '/console',
+    name: 'Console',
+    component: () => import('@/views/user/DashboardView.vue'),
+    meta: {
+      requiresAuth: true,
+      requiresAdmin: false,
+      title: 'Console',
+      titleKey: 'dashboard.title'
+    },
+    // Runs after the global guard, so the session is already restored and an
+    // anonymous visitor has been sent to /login?redirect=/console first.
+    beforeEnter: () => resolveConsoleDestination(useAuthStore().isAdmin)
   },
   {
     path: '/dashboard',
@@ -797,6 +848,22 @@ router.beforeEach(async (to, _from, next) => {
   if (!requiresAuth) {
     // If already authenticated and trying to access login/register, redirect to appropriate dashboard
     if (authStore.isAuthenticated && (to.path === '/login' || to.path === '/register')) {
+      // PriceAI C-end bridge: already logged-in users must still complete code handoff.
+      // (Admin accounts previously jumped straight to /admin/dashboard and skipped the bridge.)
+      if (to.path === '/login') {
+        const bridge = readPriceAIBridgeQuery(to.query as Record<string, unknown>)
+        if (bridge.returnUrl) {
+          const ok = await completePriceAIBridgeRedirect(bridge)
+          if (ok) {
+            next(false)
+            return
+          }
+          // Bridge failed: stay on /login so the user can retry. Do not dump
+          // admins into /admin/dashboard while PriceAI still has no session.
+          next()
+          return
+        }
+      }
       // In backend mode, non-admin users should NOT be redirected away from login
       // (they are blocked from all protected routes, so redirecting would cause a loop)
       if (appStore.backendModeEnabled && !authStore.isAdmin) {
@@ -946,18 +1013,25 @@ router.onError((error) => {
     error.name === 'ChunkLoadError'
 
   if (isChunkLoadError) {
-    // Avoid infinite reload loop by checking sessionStorage
-    const reloadKey = 'chunk_reload_attempted'
-    const lastReload = sessionStorage.getItem(reloadKey)
+    // Avoid infinite reload loop by checking sessionStorage.
+    // Hub proxy + Vite HMR misroute used to thrash reload; keep a long cooldown
+    // and cap attempts per browser tab.
+    const reloadKey = 'tb_chunk_reload_v1'
     const now = Date.now()
-
-    // Allow reload if never attempted or more than 10 seconds ago
-    if (!lastReload || now - parseInt(lastReload) > 10000) {
-      sessionStorage.setItem(reloadKey, now.toString())
-      console.warn('Chunk load error detected, reloading page to fetch latest version...')
+    let state: { t: number; n: number } = { t: 0, n: 0 }
+    try {
+      state = JSON.parse(sessionStorage.getItem(reloadKey) || '{"t":0,"n":0}')
+    } catch {
+      state = { t: 0, n: 0 }
+    }
+    const withinWindow = state.t && now - state.t < 60000
+    const attempts = withinWindow ? state.n : 0
+    if (attempts < 1) {
+      sessionStorage.setItem(reloadKey, JSON.stringify({ t: now, n: attempts + 1 }))
+      console.warn('Chunk load error detected, reloading page once to fetch latest version...')
       window.location.reload()
     } else {
-      console.error('Chunk load error persists after reload. Please clear browser cache.')
+      console.error('Chunk load error persists after reload. Please hard-refresh or clear cache.')
     }
   }
 })

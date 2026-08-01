@@ -1,0 +1,89 @@
+{
+  "_spec": "docs/PRICEAI_PORTAL_NAV_SPEC.md §8.1 — machine-readable form of the reverse-proxy contract.",
+  "_rule": "Longest prefix wins. Anything not matched by tokenbazaar.exact or tokenbazaar.prefixes goes to PriceAI.",
+  "_guard": "frontend/src/router/__tests__/sameOriginRouteMap.spec.ts fails CI when TokenBazaar gains a top-level route that is not registered here.",
+  "default": "priceai",
+  "tokenbazaar": {
+    "exact": [
+      "/auth/callback",
+      "/auth/oidc/callback",
+      "/auth/linuxdo/callback",
+      "/auth/wechat/callback",
+      "/auth/wechat/payment/callback",
+      "/auth/dingtalk/callback",
+      "/auth/dingtalk/email-completion"
+    ],
+    "prefixes": [
+      "/api/v1",
+      "/admin",
+      "/affiliate",
+      "/available-channels",
+      "/batch-image",
+      "/console",
+      "/custom",
+      "/dashboard",
+      "/email-verify",
+      "/forgot-password",
+      "/home",
+      "/key-usage",
+      "/keys",
+      "/legal",
+      "/login",
+      "/logout",
+      "/monitor",
+      "/orders",
+      "/payment",
+      "/profile",
+      "/purchase",
+      "/redeem",
+      "/register",
+      "/reset-password",
+      "/setup",
+      "/subscriptions",
+      "/usage"
+    ]
+  },
+  "priceai": {
+    "prefixes": [
+      "/",
+      "/account",
+      "/api",
+      "/api-transit",
+      "/auth/tokenbazaar",
+      "/channels",
+      "/commercial",
+      "/guides",
+      "/official-api",
+      "/official-prices",
+      "/pa-admin",
+      "/platforms",
+      "/privacy",
+      "/products",
+      "/support",
+      "/wholesale"
+    ]
+  },
+  "resolvedConflicts": {
+    "/": {
+      "owner": "priceai",
+      "why": "Portal is the marketing front page (AGENTS.md). TokenBazaar's own / and /home redirect out to the portal in hub mode, so TB never needs to serve /."
+    },
+    "/login": {
+      "owner": "tokenbazaar",
+      "why": "C-end login is TokenBazaar only. PriceAI's src/app/login/page.tsx becomes unreachable same-origin, which is intended — PA middleware already 307s to TB."
+    },
+    "/api": {
+      "owner": "priceai",
+      "why": "PriceAI Next.js route handlers. Longest-prefix match keeps /api/v1 on TokenBazaar. Hard constraint: PriceAI must never add an /api/v1 prefix."
+    },
+    "/admin": {
+      "owner": "tokenbazaar",
+      "why": "DECIDED 2026-07-31 (option A): PriceAI Admin moved to /pa-admin, so /admin is TokenBazaar's alone. No sub-path split — the CI guard stays at first-segment granularity.",
+      "status": "decided"
+    }
+  },
+  "notes": {
+    "catchAll": "TokenBazaar's /:pathMatch(.*)* 404 view is unreachable same-origin; unknown paths land on PriceAI's 404. Intended.",
+    "storageNamespace": "Audited 2026-07-30: zero collisions. TB localStorage keys (28) vs PriceAI's single 'priceai-theme'; TB cookies are all *_oauth_*, PriceAI's are all priceai_*. New keys on either side must carry a project-specific prefix."
+  }
+}

@@ -197,12 +197,26 @@ export default {
     contentModeration: '内容审核',
     promptAudit: '提示词审计',
     auditLogs: '操作日志',
+    // PriceAI 门户模块（docs/PRICEAI_PORTAL_NAV_SPEC.md §4.2）
+    portal: '发现门户',
+    portalChannels: '卡网订阅',
+    portalChannelsShort: '卡网',
+    portalOfficial: '官方订阅',
+    portalOfficialShort: '订阅',
+    portalApi: '官方 API',
+    portalApiShort: 'API',
+    portalTransit: '中转 API',
+    portalTransitShort: '中转',
+    portalDetector: '模型检测',
+    portalDetectorShort: '检测',
   },
 
   // Auth
   auth: {
     welcomeBack: '欢迎回来',
     signInToAccount: '登录您的账户以继续',
+    secureSessionBadge: 'auth · 安全会话',
+    allRightsReserved: '保留所有权利。',
     signIn: '登录',
     signingIn: '登录中...',
     createAccount: '创建账户',

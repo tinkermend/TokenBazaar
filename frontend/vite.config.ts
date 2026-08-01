@@ -157,6 +157,20 @@ export default defineConfig(({ mode }) => {
     server: {
       host: '0.0.0.0',
       port: devPort,
+      // When browsed via Caddy hub :9080, HMR websocket must advertise that port.
+      // Bare :5173 dev is unchanged when VITE_HMR_CLIENT_PORT is unset.
+      // Hub proxy (Caddy :9080) routes "/" to PriceAI. Vite's default HMR websocket
+      // also targets "/", so the browser talks to Next, disconnects, and full-reloads
+      // the console in a tight loop. Use a dedicated path that Caddy sends to Vite.
+      hmr: env.VITE_HMR_CLIENT_PORT
+        ? {
+            protocol: 'ws',
+            host: '127.0.0.1',
+            clientPort: Number(env.VITE_HMR_CLIENT_PORT),
+            path: '/__vite_hmr',
+          }
+        : undefined,
+      origin: env.VITE_DEV_PUBLIC_ORIGIN || undefined,
       proxy: {
         '/api': {
           target: backendUrl,

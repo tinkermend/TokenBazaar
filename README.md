@@ -883,6 +883,27 @@ sub2api/
 
 ---
 
+## TokenBazaar × PriceAI local hub credentials
+
+> Local/dev only. Default admin from AUTO_SETUP — **not a production secret**.
+
+| Item | Value |
+| --- | --- |
+| Admin email | `admin@tokenbazaar.local` |
+| Admin password | `Admin123456!` |
+| PriceAI portal | http://127.0.0.1:3000 |
+| TokenBazaar console (Vite) | http://127.0.0.1:5173 |
+| TokenBazaar API | http://127.0.0.1:8081 |
+| Postgres (Podman) | `tokenbazaar-pg` → `127.0.0.1:5432` (`sub2api` / `sub2api` / `sub2api`) |
+| Redis (Podman) | `tokenbazaar-redis` → `127.0.0.1:6379` |
+| Shared Postgres | One instance, two DBs: `sub2api` + `priceai`; see [deploy/local-hub/README.md](deploy/local-hub/README.md) |
+
+Notes:
+
+- If host **8080** is busy, API listens on **8081**; Vite console uses **5173** so PriceAI can keep **3000**.
+- Public registration may be disabled; use the admin account above for login loop checks.
+- See [docs/PRICEAI_HUB.md](docs/PRICEAI_HUB.md) and [AGENTS.md](AGENTS.md).
+
 ## License
 
 This project is licensed under the [GNU Lesser General Public License v3.0](LICENSE) (or later).
