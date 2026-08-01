@@ -47,6 +47,7 @@ www.example.com {
 		/redeem /redeem/* /monitor /monitor/* /affiliate /affiliate/* \
 		/batch-image /batch-image/* /available-channels /available-channels/* \
 		/home /home/* /payment/* /custom/* /legal/* \
+		/model-plaza /model-plaza/* \
 		/admin /admin/*
 	handle @tb_console {
 		reverse_proxy 127.0.0.1:8080

@@ -14,9 +14,9 @@
       "/auth/dingtalk/email-completion"
     ],
     "prefixes": [
-      "/api/v1",
       "/admin",
       "/affiliate",
+      "/api/v1",
       "/available-channels",
       "/batch-image",
       "/console",
@@ -30,6 +30,7 @@
       "/legal",
       "/login",
       "/logout",
+      "/model-plaza",
       "/monitor",
       "/orders",
       "/payment",
